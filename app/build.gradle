@@ -1,0 +1,16 @@
+apply plugin: 'com.android.application'
+apply from: '../common.gradle'
+
+registerModule()
+
+android {
+    defaultConfig {
+        applicationId "io.kotlinovsky.appkit"
+        versionName "1.0"
+        versionCode 1
+    }
+}
+
+dependencies {
+    implementation 'androidx.appcompat:appcompat:1.1.0'
+}

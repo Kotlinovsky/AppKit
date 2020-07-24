@@ -1,0 +1,57 @@
+apply plugin: 'com.android.library'
+apply from: '../common.gradle'
+apply plugin: 'maven-publish'
+
+def githubProperties = new Properties()
+githubProperties.load(new FileInputStream(rootProject.file("github.properties")))
+
+publishing {
+    publications {
+        bar(MavenPublication) {
+            artifactId "appkit"
+            artifact "$buildDir/outputs/aar/appkit-release.aar"
+            groupId 'io.kotlinovsky'
+            version "1.0.0"
+        }
+    }
+
+    repositories {
+        maven {
+            name = "GitHubPackages"
+            url = uri("https://maven.pkg.github.com/Kotlinovsky/AppKit")
+
+            credentials {
+                username = githubProperties['gpr.usr'] ?: System.getenv("GPR_USER")
+                password = githubProperties['gpr.key'] ?: System.getenv("GPR_API_KEY")
+            }
+        }
+    }
+}
+
+registerModule()
+
+android {
+    defaultConfig {
+        consumerProguardFiles "consumer-rules.pro"
+    }
+
+    testOptions {
+        unitTests {
+            includeAndroidResources = true
+
+            all {
+                jvmArgs '-noverify', '-ea'
+            }
+        }
+    }
+}
+
+dependencies {
+    implementation 'androidx.core:core-ktx:1.3.0'
+    implementation 'com.google.android.material:material:1.3.0-alpha02'
+    implementation "androidx.fragment:fragment-ktx:1.2.5"
+
+    testImplementation "junit:junit:4.13"
+    testImplementation 'org.robolectric:robolectric:4.3.1'
+    testImplementation "com.nhaarman.mockitokotlin2:mockito-kotlin:2.2.0"
+}
