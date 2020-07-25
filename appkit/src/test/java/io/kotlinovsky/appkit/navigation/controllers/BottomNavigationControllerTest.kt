@@ -1,5 +1,6 @@
 package io.kotlinovsky.appkit.navigation.controllers
 
+import android.os.Bundle
 import android.view.View
 import android.widget.FrameLayout
 import androidx.appcompat.app.AppCompatActivity
@@ -47,7 +48,7 @@ class BottomNavigationControllerTest : Assert() {
                 }
             }
 
-        navController.setup(bottomNavigationView)
+        navController.setup(bottomNavigationView, null)
 
         val firstFragmentTag = bottomNavigationView.menu.getItem(0).itemId
         val firstFragment =
@@ -245,7 +246,7 @@ class BottomNavigationControllerTest : Assert() {
                 }
             }
 
-        navController.setup(bottomNavigationView)
+        navController.setup(bottomNavigationView, null)
 
         val firstFragmentTag = bottomNavigationView.menu.getItem(0).itemId
         val secondFragmentTag = bottomNavigationView.menu.getItem(1).itemId
@@ -286,7 +287,7 @@ class BottomNavigationControllerTest : Assert() {
                 }
             }
 
-        navController.setup(bottomNavigationView)
+        navController.setup(bottomNavigationView, null)
 
         val firstChildFragment = ResettableFragment(R.layout.layout_container)
         val secondChildFragment = Fragment(R.layout.layout_container)
@@ -294,7 +295,8 @@ class BottomNavigationControllerTest : Assert() {
         val fourthChildFragment = ResettableFragment(R.layout.layout_container)
         val fifthChildFragment = Fragment(R.layout.layout_container)
         val firstFragmentTag = bottomNavigationView.menu.getItem(0).itemId
-        val firstFragment = activity.supportFragmentManager.findFragmentByTag(firstFragmentTag.toString())
+        val firstFragment =
+            activity.supportFragmentManager.findFragmentByTag(firstFragmentTag.toString())
 
         firstFragment!!.childFragmentManager.commit {
             add(R.id.container, firstChildFragment)
@@ -360,6 +362,78 @@ class BottomNavigationControllerTest : Assert() {
         assertEquals(1, firstChildFragment.resetCalls)
         assertEquals(1, thirdChildFragment.resetCalls) // returned false
         assertEquals(1, fourthChildFragment.resetCalls) // returned false
+    }
+
+    @Test
+    fun testStateSaving() {
+        val controller = Robolectric.buildActivity(AppCompatActivity::class.java)
+        val activity = controller.get()
+
+        val fragmentContainer = FrameLayout(activity)
+        val container = FrameLayout(activity).apply { id = View.generateViewId() }
+        val firstFragmentTag = View.generateViewId()
+        val secondFragmentTag = View.generateViewId()
+        val thirdFragmentTag = View.generateViewId()
+        val bottomNavigationView = BottomNavigationView(activity).apply {
+            id = View.generateViewId()
+            menu.add(0, firstFragmentTag, 1, "1")
+            menu.add(0, secondFragmentTag, 2, "2")
+            menu.add(0, thirdFragmentTag, 3, "3")
+        }
+
+        activity.setContentView(container)
+        container.addView(fragmentContainer)
+        container.addView(bottomNavigationView)
+        controller.setup()
+
+        val navController =
+            BottomNavigationController(container.id, activity.supportFragmentManager) {
+                when (it) {
+                    1 -> Fragment(R.layout.layout_container)
+                    2 -> Fragment(R.layout.layout_container)
+                    else -> Fragment(R.layout.layout_container)
+                }
+            }
+
+        navController.setup(bottomNavigationView, null)
+        bottomNavigationView.selectedItemId = secondFragmentTag
+        bottomNavigationView.selectedItemId = thirdFragmentTag
+
+        val state = Bundle()
+        controller.saveInstanceState(state)
+        navController.save(state)
+        controller.destroy()
+
+        val newController = Robolectric.buildActivity(AppCompatActivity::class.java)
+        val newActivity = controller.get()
+
+        val newFragmentContainer = FrameLayout(newActivity)
+        val newContainer = FrameLayout(newActivity)
+        val newBottomNavigationView = BottomNavigationView(newActivity).apply {
+            menu.add(0, firstFragmentTag, 1, "1")
+            menu.add(0, secondFragmentTag, 2, "2")
+            menu.add(0, thirdFragmentTag, 3, "3")
+        }
+
+        newContainer.addView(newFragmentContainer)
+        newContainer.addView(newBottomNavigationView)
+        newActivity.setContentView(newContainer)
+        newController.setup(state)
+
+        val newNavController =
+            BottomNavigationController(newContainer.id, newActivity.supportFragmentManager) {
+                when (it) {
+                    1 -> Fragment(R.layout.layout_container)
+                    2 -> Fragment(R.layout.layout_container)
+                    else -> Fragment(R.layout.layout_container)
+                }
+            }
+
+        newNavController.setup(newBottomNavigationView, state)
+
+        assertEquals(2, newNavController.backstack.size)
+        assertEquals(firstFragmentTag, newNavController.backstack[0])
+        assertEquals(secondFragmentTag, newNavController.backstack[1])
     }
 
     private fun isFragmentRemoved(fragmentManager: FragmentManager, fragment: Fragment) =

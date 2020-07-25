@@ -1,5 +1,6 @@
 package io.kotlinovsky.appkit.navigation.controllers
 
+import android.os.Bundle
 import androidx.annotation.IdRes
 import androidx.annotation.VisibleForTesting
 import androidx.fragment.app.Fragment
@@ -9,6 +10,9 @@ import com.google.android.material.bottomnavigation.BottomNavigationView
 import io.kotlinovsky.appkit.navigation.fragments.OnResetListener
 import io.kotlinovsky.appkit.navigation.popBackstack
 import java.util.*
+
+private const val BACKSTACK_LENGTH_BUNDLE_KEY = "backstack_length"
+private const val BACKSTACK_ITEM_BUNDLE_KEY = "backstack_item_"
 
 /**
  * Контроллер навигации BottomNavigationView
@@ -34,9 +38,16 @@ class BottomNavigationController(
      * Запускает стартовый фрагмент если ни один фрагмент не запущен.
      *
      * @param bottomNavigationView BottomNavigationView для связки.
+     * @param savedInstanceState Bundle с состоянием.
      */
-    fun setup(bottomNavigationView: BottomNavigationView) {
+    fun setup(bottomNavigationView: BottomNavigationView, savedInstanceState: Bundle?) {
         this.bottomNavigationView = bottomNavigationView
+
+        if (savedInstanceState != null) {
+            repeat(savedInstanceState.getInt(BACKSTACK_LENGTH_BUNDLE_KEY, 0)) {
+                backstack.push(savedInstanceState.getInt("$BACKSTACK_ITEM_BUNDLE_KEY$it"))
+            }
+        }
 
         if (fragmentManager.fragments.isEmpty()) {
             fragmentManager
@@ -45,8 +56,7 @@ class BottomNavigationController(
                     containerId,
                     createFragment(bottomNavigationView.selectedItemId),
                     bottomNavigationView.selectedItemId.toString()
-                )
-                .commit()
+                ).commit()
         }
 
         bottomNavigationView.setOnNavigationItemSelectedListener {
@@ -60,7 +70,10 @@ class BottomNavigationController(
 
             if (previousItemId == selectedItemId) {
                 if (selectedFragment!!.childFragmentManager.backStackEntryCount > 0) {
-                    selectedFragment.childFragmentManager.popBackStack(null, POP_BACK_STACK_INCLUSIVE)
+                    selectedFragment.childFragmentManager.popBackStack(
+                        null,
+                        POP_BACK_STACK_INCLUSIVE
+                    )
                 } else {
                     val fragments = LinkedList<Fragment>().apply { push(selectedFragment) }
                     val listeners = LinkedList<OnResetListener>()
@@ -121,6 +134,20 @@ class BottomNavigationController(
                 .commit()
 
             true
+        }
+    }
+
+    /**
+     * Сохраняет состояние в переданный Bundle.
+     * Сохраняет Backstack.
+     *
+     * @param outState Bundle, в который будет сохранено состояние.
+     */
+    fun save(outState: Bundle) {
+        outState.putInt(BACKSTACK_LENGTH_BUNDLE_KEY, backstack.size)
+
+        repeat(backstack.size) {
+            outState.putInt("$BACKSTACK_ITEM_BUNDLE_KEY$it", backstack[it])
         }
     }
 
