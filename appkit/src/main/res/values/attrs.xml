@@ -8,10 +8,22 @@
         <attr name="badgeAnimationDuration" format="integer" />
     </declare-styleable>
 
+    <declare-styleable name="PlanetView">
+        <attr name="planetOrbitWidth" format="dimension" />
+        <attr name="planetOrbitMargin" format="dimension" />
+        <attr name="planetSatelliteAngle" format="integer" />
+        <attr name="planetSatelliteOutlineColor" format="color" />
+        <attr name="planetSatelliteOutlineWidth" format="dimension" />
+        <attr name="planetActiveOrbitWidth" format="dimension" />
+        <attr name="planetActiveColor" format="color" />
+        <attr name="planetColor" format="color" />
+    </declare-styleable>
+
     <declare-styleable name="CodeEditText">
         <attr name="codeLength" format="integer" />
     </declare-styleable>
 
     <attr name="badgeViewStyle" format="reference" />
+    <attr name="planetViewStyle" format="reference" />
     <attr name="codeEditTextStyle" format="reference" />
 </resources>
