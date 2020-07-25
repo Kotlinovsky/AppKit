@@ -8,5 +8,10 @@
         <attr name="badgeAnimationDuration" format="integer" />
     </declare-styleable>
 
+    <declare-styleable name="CodeEditText">
+        <attr name="codeLength" format="integer" />
+    </declare-styleable>
+
     <attr name="badgeViewStyle" format="reference" />
+    <attr name="codeEditTextStyle" format="reference" />
 </resources>

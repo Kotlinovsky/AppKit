@@ -6,7 +6,7 @@ ext.registerModule = {
         buildToolsVersion "29.0.3"
 
         defaultConfig {
-            minSdkVersion 16
+            minSdkVersion 17
             targetSdkVersion 29
         }
 
