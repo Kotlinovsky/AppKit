@@ -5,9 +5,11 @@ import android.widget.FrameLayout
 import androidx.appcompat.app.AppCompatActivity
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.FragmentManager
+import androidx.fragment.app.commit
 import com.google.android.material.bottomnavigation.BottomNavigationView
 import io.kotlinovsky.appkit.AppKitTestRunner
 import io.kotlinovsky.appkit.R
+import io.kotlinovsky.appkit.navigation.fragments.OnResetListener
 import org.junit.Assert
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -36,18 +38,20 @@ class BottomNavigationControllerTest : Assert() {
         container.addView(bottomNavigationView)
         controller.setup()
 
-        val navController = BottomNavigationController(container.id, activity.supportFragmentManager) {
-            when (it) {
-                1 -> Fragment(R.layout.layout_container)
-                2 -> Fragment(R.layout.layout_container)
-                else -> Fragment(R.layout.layout_container)
+        val navController =
+            BottomNavigationController(container.id, activity.supportFragmentManager) {
+                when (it) {
+                    1 -> Fragment(R.layout.layout_container)
+                    2 -> Fragment(R.layout.layout_container)
+                    else -> Fragment(R.layout.layout_container)
+                }
             }
-        }
 
         navController.setup(bottomNavigationView)
 
         val firstFragmentTag = bottomNavigationView.menu.getItem(0).itemId
-        val firstFragment = activity.supportFragmentManager.findFragmentByTag(firstFragmentTag.toString())
+        val firstFragment =
+            activity.supportFragmentManager.findFragmentByTag(firstFragmentTag.toString())
         val firstNestedFragment = Fragment(R.layout.layout_container)
         val firstsSecondNestedFragment = Fragment(R.layout.layout_container)
 
@@ -69,7 +73,8 @@ class BottomNavigationControllerTest : Assert() {
 
         val secondFragmentTag = bottomNavigationView.menu.getItem(1).itemId
         bottomNavigationView.selectedItemId = secondFragmentTag
-        val secondFragment = activity.supportFragmentManager.findFragmentByTag(secondFragmentTag.toString())
+        val secondFragment =
+            activity.supportFragmentManager.findFragmentByTag(secondFragmentTag.toString())
         val secondNestedFragment = Fragment(R.layout.layout_container)
         val secondsSecondNestedFragment = Fragment(R.layout.layout_container)
 
@@ -95,7 +100,8 @@ class BottomNavigationControllerTest : Assert() {
 
         val thirdFragmentTag = bottomNavigationView.menu.getItem(2).itemId
         bottomNavigationView.selectedItemId = thirdFragmentTag
-        val thirdFragment = activity.supportFragmentManager.findFragmentByTag(thirdFragmentTag.toString())
+        val thirdFragment =
+            activity.supportFragmentManager.findFragmentByTag(thirdFragmentTag.toString())
         val thirdNestedFragment = Fragment(R.layout.layout_container)
         val thirdsSecondNestedFragment = Fragment(R.layout.layout_container)
 
@@ -230,13 +236,14 @@ class BottomNavigationControllerTest : Assert() {
         container.addView(bottomNavigationView)
         controller.setup()
 
-        val navController = BottomNavigationController(container.id, activity.supportFragmentManager) {
-            when (it) {
-                1 -> Fragment(R.layout.layout_container)
-                2 -> Fragment(R.layout.layout_container)
-                else -> Fragment(R.layout.layout_container)
+        val navController =
+            BottomNavigationController(container.id, activity.supportFragmentManager) {
+                when (it) {
+                    1 -> Fragment(R.layout.layout_container)
+                    2 -> Fragment(R.layout.layout_container)
+                    else -> Fragment(R.layout.layout_container)
+                }
             }
-        }
 
         navController.setup(bottomNavigationView)
 
@@ -251,6 +258,121 @@ class BottomNavigationControllerTest : Assert() {
         assertEquals(firstFragmentTag, navController.backstack[0])
     }
 
+    @Test
+    fun testStateResetting() {
+        val controller = Robolectric.buildActivity(AppCompatActivity::class.java)
+        val activity = controller.get()
+
+        val fragmentContainer = FrameLayout(activity)
+        val container = FrameLayout(activity).apply { id = View.generateViewId() }
+        val bottomNavigationView = BottomNavigationView(activity).apply {
+            id = View.generateViewId()
+            menu.add(0, View.generateViewId(), 1, "1")
+            menu.add(0, View.generateViewId(), 2, "2")
+            menu.add(0, View.generateViewId(), 3, "3")
+        }
+
+        activity.setContentView(container)
+        container.addView(fragmentContainer)
+        container.addView(bottomNavigationView)
+        controller.setup()
+
+        val navController =
+            BottomNavigationController(container.id, activity.supportFragmentManager) {
+                when (it) {
+                    1 -> Fragment(R.layout.layout_container)
+                    2 -> Fragment(R.layout.layout_container)
+                    else -> Fragment(R.layout.layout_container)
+                }
+            }
+
+        navController.setup(bottomNavigationView)
+
+        val firstChildFragment = ResettableFragment(R.layout.layout_container)
+        val secondChildFragment = Fragment(R.layout.layout_container)
+        val thirdChildFragment = ResettableFragment(R.layout.layout_container)
+        val fourthChildFragment = ResettableFragment(R.layout.layout_container)
+        val fifthChildFragment = Fragment(R.layout.layout_container)
+        val firstFragmentTag = bottomNavigationView.menu.getItem(0).itemId
+        val firstFragment = activity.supportFragmentManager.findFragmentByTag(firstFragmentTag.toString())
+
+        firstFragment!!.childFragmentManager.commit {
+            add(R.id.container, firstChildFragment)
+        }
+
+        firstChildFragment.childFragmentManager.commit {
+            add(R.id.container, thirdChildFragment)
+        }
+
+        firstChildFragment.childFragmentManager.commit {
+            add(R.id.container, fourthChildFragment)
+        }
+
+        firstFragment.childFragmentManager.commit {
+            replace(R.id.container, secondChildFragment)
+            addToBackStack(null)
+        }
+
+        firstFragment.childFragmentManager.commit {
+            replace(R.id.container, fifthChildFragment)
+            addToBackStack(null)
+        }
+
+        bottomNavigationView.selectedItemId = firstFragmentTag
+
+        assertTrue(firstChildFragment.isVisible)
+        assertTrue(isFragmentRemoved(firstFragment.childFragmentManager, secondChildFragment))
+        assertTrue(isFragmentRemoved(firstFragment.childFragmentManager, fifthChildFragment))
+        assertTrue(thirdChildFragment.isVisible)
+        assertTrue(fourthChildFragment.isVisible)
+
+        firstChildFragment.resetResult = true
+        thirdChildFragment.resetResult = true
+        fourthChildFragment.resetResult = true
+        bottomNavigationView.selectedItemId = firstFragmentTag
+
+        assertTrue(firstChildFragment.isVisible)
+        assertTrue(thirdChildFragment.isVisible)
+        assertTrue(fourthChildFragment.isVisible)
+        assertEquals(0, firstChildFragment.resetCalls)
+        assertEquals(0, thirdChildFragment.resetCalls)
+        assertEquals(1, fourthChildFragment.resetCalls)
+
+        fourthChildFragment.resetCalls = 0
+        fourthChildFragment.resetResult = false
+        bottomNavigationView.selectedItemId = firstFragmentTag
+
+        assertTrue(firstChildFragment.isVisible)
+        assertTrue(thirdChildFragment.isVisible)
+        assertTrue(fourthChildFragment.isVisible)
+        assertEquals(0, firstChildFragment.resetCalls)
+        assertEquals(1, thirdChildFragment.resetCalls)
+        assertEquals(1, fourthChildFragment.resetCalls) // returned false
+
+        thirdChildFragment.resetCalls = 0
+        thirdChildFragment.resetResult = false
+        fourthChildFragment.resetCalls = 0
+        bottomNavigationView.selectedItemId = firstFragmentTag
+
+        assertTrue(firstChildFragment.isVisible)
+        assertTrue(thirdChildFragment.isVisible)
+        assertTrue(fourthChildFragment.isVisible)
+        assertEquals(1, firstChildFragment.resetCalls)
+        assertEquals(1, thirdChildFragment.resetCalls) // returned false
+        assertEquals(1, fourthChildFragment.resetCalls) // returned false
+    }
+
     private fun isFragmentRemoved(fragmentManager: FragmentManager, fragment: Fragment) =
         fragmentManager.findFragmentByTag(fragment.tag) == null
+
+    open class ResettableFragment(layoutId: Int) : Fragment(layoutId), OnResetListener {
+
+        var resetResult = false
+        var resetCalls = 0
+
+        override fun onReset(): Boolean {
+            resetCalls++
+            return resetResult
+        }
+    }
 }

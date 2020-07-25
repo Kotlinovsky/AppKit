@@ -4,7 +4,9 @@ import androidx.annotation.IdRes
 import androidx.annotation.VisibleForTesting
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.FragmentManager
+import androidx.fragment.app.FragmentManager.POP_BACK_STACK_INCLUSIVE
 import com.google.android.material.bottomnavigation.BottomNavigationView
+import io.kotlinovsky.appkit.navigation.fragments.OnResetListener
 import io.kotlinovsky.appkit.navigation.popBackstack
 import java.util.*
 
@@ -39,7 +41,11 @@ class BottomNavigationController(
         if (fragmentManager.fragments.isEmpty()) {
             fragmentManager
                 .beginTransaction()
-                .add(containerId, createFragment(bottomNavigationView.selectedItemId), bottomNavigationView.selectedItemId.toString())
+                .add(
+                    containerId,
+                    createFragment(bottomNavigationView.selectedItemId),
+                    bottomNavigationView.selectedItemId.toString()
+                )
                 .commit()
         }
 
@@ -48,16 +54,42 @@ class BottomNavigationController(
                 return@setOnNavigationItemSelectedListener true
             }
 
-            val previousItemId = bottomNavigationView.selectedItemId
             val selectedItemId = it.itemId
+            val previousItemId = bottomNavigationView.selectedItemId
+            var selectedFragment = fragmentManager.findFragmentByTag(selectedItemId.toString())
 
             if (previousItemId == selectedItemId) {
-                // TODO: State resetting
+                if (selectedFragment!!.childFragmentManager.backStackEntryCount > 0) {
+                    selectedFragment.childFragmentManager.popBackStack(null, POP_BACK_STACK_INCLUSIVE)
+                } else {
+                    val fragments = LinkedList<Fragment>().apply { push(selectedFragment) }
+                    val listeners = LinkedList<OnResetListener>()
+
+                    while (fragments.isNotEmpty()) {
+                        val fragment = fragments.removeFirst()
+
+                        if (fragment.isVisible) {
+                            fragment.childFragmentManager.fragments.forEach { child ->
+                                fragments.addLast(child)
+                            }
+
+                            if (fragment is OnResetListener) {
+                                listeners.addFirst(fragment)
+                            }
+                        }
+                    }
+
+                    for (listener in listeners) {
+                        if (listener.onReset()) {
+                            break
+                        }
+                    }
+                }
+
                 return@setOnNavigationItemSelectedListener true
             }
 
             val transaction = fragmentManager.beginTransaction()
-            var selectedFragment = fragmentManager.findFragmentByTag(selectedItemId.toString())
 
             if (backstack.size > 0) {
                 val backstackIterator = backstack.iterator()

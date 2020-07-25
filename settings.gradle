@@ -1,3 +1,4 @@
+rootProject.name = "AppKit"
+
 include ':appkit'
 include ':app'
-rootProject.name = "AppKit"
