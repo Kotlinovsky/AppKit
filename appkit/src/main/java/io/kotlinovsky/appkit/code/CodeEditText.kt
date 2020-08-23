@@ -215,7 +215,11 @@ class CodeEditText : ViewGroup, View.OnKeyListener {
     }
 
     private fun setSelection(index: Int, selection: Int) {
-        (getChildAt(index) as EditText).setSelection(selection)
+        (getChildAt(index) as EditText).let {
+            if (it.length() > 0) {
+                it.setSelection(selection)
+            }
+        }
     }
 
     private fun requestDigitFocus(index: Int) {

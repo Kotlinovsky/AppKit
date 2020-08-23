@@ -11,7 +11,7 @@ publishing {
             artifactId "appkit"
             artifact "$buildDir/outputs/aar/appkit-release.aar"
             groupId 'io.kotlinovsky'
-            version "1.0.0"
+            version "1.0.1"
         }
     }
 
